@@ -1,0 +1,77 @@
+name: Verify and release
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE: ci
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.10"
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.5.1
+      - name: Install dependencies
+        run: |
+          forge soldeer install --config-location foundry
+          python -m pip install '.[test]'
+      - name: Check formatting and CLI
+        run: |
+          forge fmt --check
+          python -m pytest
+      - name: Run Foundry suite
+        id: forge
+        run: |
+          mkdir -p out/reports
+          forge test --json > out/reports/forge.json
+      - name: Normalize campaign report
+        id: report
+        if: ${{ !cancelled() && steps.forge.outcome != 'skipped' }}
+        run: |
+          report_status=0
+          invariantkit report out/reports/forge.json > out/reports/invariantkit.json || report_status=$?
+          if [ -s out/reports/invariantkit.json ]; then
+            invariantkit validate result out/reports/invariantkit.json
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+          exit "$report_status"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.report.outputs.ready == 'true' }}
+        with:
+          name: invariantkit-report
+          path: out/reports/invariantkit.json
+
+  release:
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Build wheel for matching tag
+        run: |
+          version=$(PYTHONPATH=cli python -c 'from invariantkit import __version__; print(__version__)')
+          test "$GITHUB_REF_NAME" = "v$version"
+          python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Publish tagged GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.whl --verify-tag --generate-notes
