@@ -1,0 +1,11 @@
+/cache/
+/out/
+/dependencies/
+/build/
+/dist/
+/.venv/
+/.pytest_cache/
+*.egg-info/
+__pycache__/
+/forge.json
+/invariantkit-report.json
