@@ -1,0 +1,6 @@
+[[dependencies]]
+name = "forge-std"
+version = "1.9.7"
+url = "https://codeload.github.com/foundry-rs/forge-std/zip/refs/tags/v1.9.7"
+checksum = "6437626a67008dca2e06e3783a37c65772c145df2da901943a894b9c0b770531"
+integrity = "3cdc04189663cc8b1c05b2f43c7a60589bacff228c54af1d59c4bdc50e9203ed"
