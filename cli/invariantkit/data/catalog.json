@@ -1,0 +1,376 @@
+{
+  "schema_version": "1.0",
+  "definitions": [
+    {
+      "id": "access.roles.campaign",
+      "name": "Ownership and role policy",
+      "category": "protocol",
+      "adapter": "access",
+      "targets": [
+        {
+          "ref": "AuthorityInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "authority_state"
+      },
+      "assumptions": [
+        "The fixture defines the expected owners, admins, and operator roles."
+      ],
+      "actions": [
+        "rotateOwner",
+        "grantOperator",
+        "revokeOperator",
+        "setOwnedLimit",
+        "setRoleLimit"
+      ],
+      "forge": {
+        "suite": "test/invariant/Authority.t.sol:AuthorityInvariantTest",
+        "test": "invariant_authorityAndSettingsMatchPolicy()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/Authority.t.sol:AuthorityHandler.rotateOwner": 1,
+            "test/invariant/Authority.t.sol:AuthorityHandler.grantOperator": 1,
+            "test/invariant/Authority.t.sol:AuthorityHandler.revokeOperator": 1,
+            "test/invariant/Authority.t.sol:AuthorityHandler.setOwnedLimit": 1,
+            "test/invariant/Authority.t.sol:AuthorityHandler.setRoleLimit": 1
+          },
+          "zero_assertions": [
+            "no ownership transfer",
+            "no role grant",
+            "no role revocation",
+            "no owner action",
+            "no operator action"
+          ]
+        }
+      }
+    },
+    {
+      "id": "accounting.fee-token.campaign",
+      "name": "Fee token custody and supply",
+      "category": "accounting",
+      "adapter": "accounting",
+      "targets": [
+        {
+          "ref": "TokenAccountingInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "balance_reconciliation"
+      },
+      "assumptions": [
+        "The boundary includes both token holders and the fee treasury."
+      ],
+      "actions": [
+        "transfer",
+        "mint",
+        "burn"
+      ],
+      "forge": {
+        "suite": "test/invariant/TokenAccounting.t.sol:TokenAccountingInvariantTest",
+        "test": "invariant_accountedBalancesAndSupply()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/TokenAccounting.t.sol:TokenAccountingHandler.transfer": 1,
+            "test/invariant/TokenAccounting.t.sol:TokenAccountingHandler.mint": 1,
+            "test/invariant/TokenAccounting.t.sol:TokenAccountingHandler.burn": 1
+          },
+          "zero_assertions": [
+            "no fee-bearing transfers",
+            "no minting",
+            "no burning"
+          ]
+        }
+      }
+    },
+    {
+      "id": "amm.constant-product.campaign",
+      "name": "Constant-product reserves and swaps",
+      "category": "protocol",
+      "adapter": "amm",
+      "targets": [
+        {
+          "ref": "SwapPoolInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "reserve_reconciliation"
+      },
+      "assumptions": [
+        "Each swap has one input and one output. The fee stays in the pool."
+      ],
+      "actions": [
+        "swap"
+      ],
+      "forge": {
+        "suite": "test/invariant/SwapPool.t.sol:SwapPoolInvariantTest",
+        "test": "invariant_reservesMatchCustodyAndTokenSupply()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/SwapPool.t.sol:SwapHandler.swap": 1
+          },
+          "zero_assertions": [
+            "no token0-to-token1 swap",
+            "no token1-to-token0 swap"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cross-contract.custody.campaign",
+      "name": "Vault, strategy, and treasury custody",
+      "category": "accounting",
+      "adapter": "cross-contract",
+      "targets": [
+        {
+          "ref": "VaultStrategyTreasuryInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "custody_boundary"
+      },
+      "assumptions": [
+        "Each boundary tracks the same ERC-20. The vault and strategy back shares."
+      ],
+      "actions": [
+        "allocate",
+        "deposit",
+        "distribute",
+        "recall",
+        "withdraw"
+      ],
+      "forge": {
+        "suite": "test/invariant/VaultStrategyTreasury.t.sol:VaultStrategyTreasuryInvariantTest",
+        "test": "invariant_assetsReconcileAcrossContracts()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/VaultStrategyTreasury.t.sol:CustodyHandler.allocate": 1,
+            "test/invariant/VaultStrategyTreasury.t.sol:CustodyHandler.deposit": 1,
+            "test/invariant/VaultStrategyTreasury.t.sol:CustodyHandler.distribute": 1,
+            "test/invariant/VaultStrategyTreasury.t.sol:CustodyHandler.recall": 1,
+            "test/invariant/VaultStrategyTreasury.t.sol:CustodyHandler.withdraw": 1
+          },
+          "zero_assertions": [
+            "no deposits",
+            "no withdrawals",
+            "no strategy allocation",
+            "no strategy recall",
+            "no treasury distribution"
+          ]
+        }
+      }
+    },
+    {
+      "id": "erc4626.fee-vault.campaign",
+      "name": "Fee vault transitions and accounting",
+      "category": "protocol",
+      "adapter": "erc4626",
+      "targets": [
+        {
+          "ref": "FeeVaultInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "vault_transitions"
+      },
+      "assumptions": [
+        "The fixture retains entry and exit fees and models direct donations."
+      ],
+      "actions": [
+        "checkConversions",
+        "deposit",
+        "donate",
+        "mint",
+        "redeem",
+        "withdraw"
+      ],
+      "forge": {
+        "suite": "test/invariant/VaultInvariant.t.sol:FeeVaultInvariantTest",
+        "test": "invariant_vaultAccounting()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/VaultHandler.sol:VaultHandler.checkConversions": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.deposit": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.donate": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.mint": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.redeem": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.withdraw": 1
+          },
+          "custom_errors": [
+            "InsufficientActionCoverage",
+            "InsufficientRoleCoverage"
+          ]
+        }
+      }
+    },
+    {
+      "id": "erc4626.fixed-rate.campaign",
+      "name": "Fixed-rate vault transitions and accounting",
+      "category": "protocol",
+      "adapter": "erc4626",
+      "targets": [
+        {
+          "ref": "VaultInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "vault_transitions"
+      },
+      "assumptions": [
+        "The fixture uses a fixed one-to-one asset and share exchange rate."
+      ],
+      "actions": [
+        "checkConversions",
+        "deposit",
+        "mint",
+        "redeem",
+        "withdraw"
+      ],
+      "forge": {
+        "suite": "test/invariant/VaultInvariant.t.sol:VaultInvariantTest",
+        "test": "invariant_vaultAccounting()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/VaultHandler.sol:VaultHandler.checkConversions": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.deposit": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.mint": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.redeem": 1,
+            "test/invariant/VaultHandler.sol:VaultHandler.withdraw": 1
+          },
+          "custom_errors": [
+            "InsufficientActionCoverage",
+            "InsufficientRoleCoverage"
+          ]
+        }
+      }
+    },
+    {
+      "id": "lending.debt.campaign",
+      "name": "Borrowing, collateral, and debt reconciliation",
+      "category": "protocol",
+      "adapter": "lending",
+      "targets": [
+        {
+          "ref": "LendingMarketInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "debt_reconciliation"
+      },
+      "assumptions": [
+        "The fixture uses fixed valuations and the boundary includes both borrowers."
+      ],
+      "actions": [
+        "borrow",
+        "repay",
+        "supply",
+        "withdraw"
+      ],
+      "forge": {
+        "suite": "test/invariant/LendingMarket.t.sol:LendingMarketInvariantTest",
+        "test": "invariant_debtAndCollateralReconcile()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/LendingMarket.t.sol:LendingHandler.borrow": 1,
+            "test/invariant/LendingMarket.t.sol:LendingHandler.repay": 1,
+            "test/invariant/LendingMarket.t.sol:LendingHandler.supply": 1,
+            "test/invariant/LendingMarket.t.sol:LendingHandler.withdraw": 1
+          },
+          "zero_assertions": [
+            "no collateral supplied",
+            "no collateral released",
+            "no borrowing",
+            "no repayment"
+          ]
+        }
+      }
+    },
+    {
+      "id": "oracle.chainlink.updated-at",
+      "name": "Chainlink observation uses updatedAt",
+      "category": "protocol",
+      "adapter": "oracle",
+      "targets": [
+        {
+          "ref": "feed"
+        }
+      ],
+      "assertion": {
+        "kind": "oracle_observation"
+      },
+      "assumptions": [
+        "The fixture exposes the Chainlink feed interface."
+      ],
+      "forge": {
+        "suite": "test/unit/OracleChecks.t.sol:OracleChecksTest",
+        "test": "test_chainlinkReadUsesUpdatedAt()",
+        "kind": "unit"
+      }
+    },
+    {
+      "id": "oracle.freshness.inclusive-age",
+      "name": "Freshness accepts the exact age limit",
+      "category": "protocol",
+      "adapter": "oracle",
+      "targets": [
+        {
+          "ref": "observation"
+        }
+      ],
+      "assertion": {
+        "kind": "oracle_freshness"
+      },
+      "assumptions": [
+        "Age and maximum age use seconds."
+      ],
+      "forge": {
+        "suite": "test/unit/OracleChecks.t.sol:OracleChecksTest",
+        "test": "testFuzz_maxAgeIsInclusive(uint128,uint128)",
+        "kind": "fuzz"
+      }
+    },
+    {
+      "id": "upgradeability.erc1967.campaign",
+      "name": "ERC-1967 slots and preserved state",
+      "category": "protocol",
+      "adapter": "upgradeability",
+      "targets": [
+        {
+          "ref": "ProxyUpgradeInvariantTest"
+        }
+      ],
+      "assertion": {
+        "kind": "upgrade_state"
+      },
+      "assumptions": [
+        "The fixture uses direct implementation changes and explicitly tracked state fields."
+      ],
+      "actions": [
+        "setLimit",
+        "upgrade"
+      ],
+      "forge": {
+        "suite": "test/invariant/ProxyUpgrade.t.sol:ProxyUpgradeInvariantTest",
+        "test": "invariant_proxySlotsAndInitializedStateMatchModel()",
+        "kind": "invariant",
+        "coverage": {
+          "required_calls": {
+            "test/invariant/ProxyUpgrade.t.sol:ProxyUpgradeHandler.setLimit": 1,
+            "test/invariant/ProxyUpgrade.t.sol:ProxyUpgradeHandler.upgrade": 1
+          },
+          "zero_assertions": [
+            "no settings update",
+            "no implementation change"
+          ]
+        }
+      }
+    }
+  ]
+}

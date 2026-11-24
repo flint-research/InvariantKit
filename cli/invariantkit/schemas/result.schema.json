@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InvariantKit campaign report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool",
+    "runner",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "const": "invariantkit"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      }
+    },
+    "runner": {
+      "const": "forge"
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/result"
+      }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suite",
+        "test",
+        "kind"
+      ],
+      "properties": {
+        "suite": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "test": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "kind": {
+          "enum": [
+            "unit",
+            "fuzz",
+            "invariant"
+          ]
+        }
+      }
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "calls",
+        "reverts",
+        "discards"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "calls": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "reverts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "discards": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 120,
+          "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+(?![\\s\\S])"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "inconclusive",
+            "not_attempted",
+            "error"
+          ]
+        },
+        "reason": {
+          "enum": [
+            null,
+            "forge_failure",
+            "coverage_gate_failed",
+            "empty_campaign",
+            "all_calls_reverted",
+            "missing_selector_metrics",
+            "required_calls_not_met",
+            "missing_binding",
+            "test_missing",
+            "test_skipped",
+            "setup_failed",
+            "invalid_test_result"
+          ]
+        },
+        "test": {
+          "$ref": "#/$defs/binding"
+        },
+        "forge_status": {
+          "enum": [
+            "Success",
+            "Failure",
+            "Skipped"
+          ]
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "runs"
+          ],
+          "properties": {
+            "runs": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "calls": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "reverts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "selectors": {
+              "type": "array",
+              "maxItems": 4096,
+              "items": {
+                "$ref": "#/$defs/selector"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "pass"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  null
+                ]
+              },
+              "forge_status": {
+                "const": "Success"
+              }
+            },
+            "required": [
+              "test",
+              "forge_status"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "fail"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "forge_failure"
+                ]
+              },
+              "forge_status": {
+                "const": "Failure"
+              }
+            },
+            "required": [
+              "test",
+              "forge_status"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "inconclusive"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "coverage_gate_failed",
+                  "empty_campaign",
+                  "all_calls_reverted",
+                  "missing_selector_metrics",
+                  "required_calls_not_met"
+                ]
+              }
+            },
+            "required": [
+              "test",
+              "forge_status"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "not_attempted"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "missing_binding",
+                  "test_missing",
+                  "test_skipped"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "error"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "reason": {
+                "enum": [
+                  "setup_failed",
+                  "invalid_test_result"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "test"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "inconclusive"
+                ]
+              },
+              "test": {
+                "properties": {
+                  "kind": {
+                    "enum": [
+                      "fuzz",
+                      "invariant"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "metrics"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
